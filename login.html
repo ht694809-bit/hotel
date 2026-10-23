@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f6f0">
+  <title>Đăng nhập · SOLENA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+  <main class="auth-layout">
+    <div class="auth-art"><img src="public/images/room.webp" alt="Phòng nghỉ SOLENA"></div>
+
+    <div class="auth-panel">
+      <p id="msg" class="error" hidden>Tài khoản đang đăng nhập không vào được trang này. Hãy đăng nhập bằng tài khoản khác.</p>
+
+      <section data-panel="login">
+        <h1>Đăng nhập</h1>
+        <p>Dùng chung cho khách, lễ tân và quản lý.</p>
+        <form id="lf">
+          <label class="field"><span>Email</span><input name="email" type="email" required autocomplete="email"></label>
+          <label class="field"><span>Mật khẩu</span><input name="password" type="password" required autocomplete="current-password"></label>
+          <button class="btn wide" type="submit">Đăng nhập</button>
+        </form>
+        <p class="auth-switch">Chưa có tài khoản? <a class="text-link" href="#register">Đăng ký</a></p>
+        <div class="demo-note">Tài khoản dùng thử<br>Quản trị: admin@solena.vn / admin123<br>Lễ tân: letan@solena.vn / 123456<br>Khách: khach@gmail.com / 123456</div>
+      </section>
+
+      <section data-panel="register">
+        <h1>Tạo tài khoản</h1>
+        <p>Để xem lại và hủy đơn đặt phòng của bạn.</p>
+        <form id="rf">
+          <label class="field"><span>Họ và tên</span><input name="name" required minlength="2" autocomplete="name"></label>
+          <label class="field"><span>Email</span><input name="email" type="email" required autocomplete="email"></label>
+          <label class="field"><span>Số điện thoại</span><input name="phone" type="tel" required pattern="0[0-9]{9,10}" title="Số điện thoại 10–11 số, bắt đầu bằng 0" autocomplete="tel"></label>
+          <label class="field"><span>Mật khẩu (ít nhất 6 ký tự)</span><input name="password" type="password" required minlength="6" autocomplete="new-password"></label>
+          <label class="field"><span>Nhập lại mật khẩu</span><input name="confirm" type="password" required minlength="6" autocomplete="new-password"></label>
+          <button class="btn wide" type="submit">Tạo tài khoản</button>
+        </form>
+        <p class="auth-switch">Đã có tài khoản? <a class="text-link" href="#login">Đăng nhập</a></p>
+      </section>
+    </div>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    // Chỉ cho quay về trang nội bộ (chặn next=javascript:… / trang ngoài)
+    const next = /^[a-z]+\.html([?#].*)?$/.test(qs('next') || '') ? qs('next') : null;
+    const home = { admin: 'admin.html', receptionist: 'staff.html', customer: 'account.html' };
+    const go = u => location.href = next || home[u.role];
+
+    $('#msg').hidden = !(next && API.currentUser());
+    setupTabs(() => {});
+
+    const lf = $('#lf'), rf = $('#rf');
+    lf.onsubmit = e => {
+      e.preventDefault();
+      run(async () => go(await API.login(lf.email.value, lf.password.value)));
+    };
+    rf.onsubmit = e => {
+      e.preventDefault();
+      const d = formData(rf);
+      if (d.password !== d.confirm) return toast('Mật khẩu nhập lại không khớp', 'danger');
+      run(async () => go(await API.register(d)));
+    };
+  </script>
+</body>
+</html>

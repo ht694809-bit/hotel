@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản trị · SOLENA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="manager">
+    <aside class="sidebar"></aside>
+    <div class="manager-main">
+      <!-- 3.4 Báo cáo & thống kê -->
+      <section data-panel="stats">
+        <div class="manager-heading"><div><h1>Báo cáo</h1><p></p></div></div>
+        <div class="metrics" id="metrics"></div>
+        <div class="dashboard-grid">
+          <section class="panel"><div class="panel-head"><h2>Doanh thu</h2>
+            <div class="field" style="margin:0"><select id="period" aria-label="Kỳ thống kê">
+              <option value="day">Theo ngày</option><option value="month" selected>Theo tháng</option><option value="year">Theo năm</option></select></div></div>
+            <div id="revenue"></div></section>
+          <section class="panel"><div class="panel-head"><h2>Tình trạng phòng</h2></div><div class="room-grid" id="room-map"></div></section>
+        </div>
+      </section>
+
+      <!-- 3.1.1 Loại phòng -->
+      <section data-panel="types">
+        <div class="manager-heading"><div><h1>Loại phòng</h1><p></p></div><button class="btn" data-new="types">Thêm loại phòng</button></div>
+        <div class="panel"><div class="table-wrap" id="types"></div></div>
+      </section>
+
+      <!-- 3.1.2 Phòng cụ thể -->
+      <section data-panel="rooms">
+        <div class="manager-heading"><div><h1>Phòng</h1><p></p></div><button class="btn" data-new="rooms">Thêm phòng</button></div>
+        <div class="panel"><div class="table-wrap" id="rooms"></div></div>
+      </section>
+
+      <!-- 3.2 Nhân sự -->
+      <section data-panel="staff">
+        <div class="manager-heading"><div><h1>Nhân sự</h1><p></p></div><button class="btn" data-new="staff">Thêm nhân viên</button></div>
+        <div class="panel"><div class="table-wrap" id="staff"></div></div>
+      </section>
+
+      <!-- 3.3 Khách hàng -->
+      <section data-panel="customers">
+        <div class="manager-heading"><div><h1>Khách hàng</h1><p></p></div></div>
+        <div class="filters"><input type="search" id="cq" placeholder="Tên, email hoặc SĐT" aria-label="Tìm khách hàng"></div>
+        <div class="panel"><div class="table-wrap" id="customers"></div></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Hộp thoại thêm/sửa -->
+  <dialog class="modal" id="types-dialog"><form id="types-form">
+    <button type="button" class="modal-close" data-close aria-label="Đóng">×</button>
+    <h2 data-title>loại phòng</h2>
+    <div class="form-grid">
+      <label class="field"><span>Tên loại phòng</span><input name="name" required placeholder="Ví dụ: Deluxe"></label>
+      <label class="field"><span>Giá một đêm (đồng)</span><input name="price" type="number" min="0" step="1000" required></label>
+      <label class="field"><span>Số khách tối đa</span><input name="capacity" type="number" min="1" required></label>
+      <label class="field"><span>Đường dẫn ảnh</span><input name="image" placeholder="public/images/room.webp"></label>
+      <label class="field full"><span>Tiện nghi, cách nhau bằng dấu phẩy</span><input name="amenities" placeholder="Wi-Fi, Điều hòa, TV"></label>
+      <label class="field full"><span>Mô tả</span><textarea name="description"></textarea></label>
+    </div>
+    <div class="row end"><button type="button" class="ghost" data-close>Hủy</button><button class="btn">Lưu</button></div>
+  </form></dialog>
+
+  <dialog class="modal" id="rooms-dialog"><form id="rooms-form">
+    <button type="button" class="modal-close" data-close aria-label="Đóng">×</button>
+    <h2 data-title>phòng</h2>
+    <label class="field"><span>Số phòng</span><input name="number" required placeholder="Ví dụ: 105"></label>
+    <label class="field"><span>Loại phòng</span><select name="typeId" required></select></label>
+    <label class="field"><span>Trạng thái</span><select name="status">
+      <option value="available">Trống</option><option value="maintenance">Bảo trì</option>
+      <option value="occupied" disabled>Đang sử dụng</option></select></label>
+    <div class="row end"><button type="button" class="ghost" data-close>Hủy</button><button class="btn">Lưu</button></div>
+  </form></dialog>
+
+  <dialog class="modal" id="staff-dialog"><form id="staff-form">
+    <button type="button" class="modal-close" data-close aria-label="Đóng">×</button>
+    <h2 data-title>nhân viên</h2>
+    <div class="form-grid">
+      <label class="field"><span>Họ tên</span><input name="name" required></label>
+      <label class="field"><span>Số điện thoại</span><input name="phone" type="tel"></label>
+      <label class="field full"><span>Email đăng nhập</span><input name="email" type="email" required></label>
+      <label class="field"><span>Mật khẩu</span><input name="password" type="password" minlength="6" placeholder="Bỏ trống nếu không đổi" autocomplete="new-password"></label>
+      <label class="field"><span>Quyền</span><select name="role"><option value="receptionist">Lễ tân</option><option value="admin">Quản trị</option></select></label>
+    </div>
+    <div class="row end"><button type="button" class="ghost" data-close>Hủy</button><button class="btn">Lưu</button></div>
+  </form></dialog>
+
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderManager(requireRole('admin'));
+
+    // Bảng CRUD dùng chung: bảng #<name>, hộp thoại #<name>-dialog chứa form #<name>-form
+    function crud(name, { load, save, remove, head, row, summary, toForm = x => x, fromForm = x => x, beforeOpen = () => {} }) {
+      const box = $(`#${name}`), dlg = $(`#${name}-dialog`), f = $(`#${name}-form`), title = $('[data-title]', dlg), base = title.textContent;
+      let items = [];
+      const render = async () => {
+        items = await load();
+        sub(name, summary(items));
+        box.innerHTML = items.length ? `<table>
+          <thead><tr>${head.map(h => `<th>${h}</th>`).join('')}<th></th></tr></thead>
+          <tbody>${items.map(x => `<tr>${row(x).map(c => `<td>${c}</td>`).join('')}
+            <td><div class="actions"><button class="text-link" data-edit="${x.id}">Sửa</button><button class="text-link danger-text" data-del="${x.id}">Xóa</button></div></td></tr>`).join('')}</tbody></table>`
+          : '<div class="empty">Chưa có dữ liệu.</div>';
+      };
+      const open = async x => {
+        await beforeOpen();
+        f.reset();
+        f.dataset.id = x?.id || '';
+        title.textContent = (x ? 'Sửa ' : 'Thêm ') + base;
+        if (x) { const v = toForm(x); for (const el of f.elements) if (el.name in v) el.value = v[el.name]; }
+        dlg.showModal();
+      };
+      $(`[data-new="${name}"]`)?.addEventListener('click', () => open());
+      $$('[data-close]', dlg).forEach(b => b.onclick = () => dlg.close());
+      f.onsubmit = e => {
+        e.preventDefault();
+        run(async () => { await save({ ...fromForm(formData(f)), id: f.dataset.id }); dlg.close(); toast('Đã lưu'); render(); });
+      };
+      box.onclick = e => {
+        const { edit, del } = e.target.dataset;
+        if (edit) open(items.find(i => i.id === edit));
+        if (del && confirm('Xóa mục này?')) run(async () => { await remove(del); toast('Đã xóa'); render(); });
+      };
+      return render;
+    }
+
+    const renderTypes = crud('types', {
+      load: API.getRoomTypes, save: API.saveRoomType, remove: API.deleteRoomType,
+      summary: ts => `${ts.length} loại phòng`,
+      head: ['Loại phòng', 'Số khách', 'Giá một đêm', 'Tiện nghi'],
+      row: t => [`<b>${esc(t.name)}</b>`, t.capacity, money(t.price), `<small>${esc(t.amenities.join(', '))}</small>`],
+      toForm: t => ({ ...t, amenities: t.amenities.join(', ') }),
+      fromForm: d => ({ ...d, amenities: d.amenities.split(',').map(s => s.trim()).filter(Boolean) }),
+    });
+
+    const renderRooms = crud('rooms', {
+      load: API.getRooms, save: API.saveRoom, remove: API.deleteRoom,
+      summary: rs => `${rs.length} phòng, ${rs.filter(r => r.status === 'available').length} phòng đang trống`,
+      head: ['Phòng', 'Loại phòng', 'Trạng thái'],
+      row: r => [`<b>${esc(r.number)}</b>`, esc(r.typeName), badge(r.status)],
+      beforeOpen: async () => $('#rooms-form').typeId.innerHTML = (await API.getRoomTypes()).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join(''),
+    });
+
+    const renderStaff = crud('staff', {
+      load: async () => (await API.getUsers()).filter(u => u.role !== 'customer'),
+      save: API.saveUser, remove: API.deleteUser,
+      summary: us => `${us.filter(u => u.role === 'receptionist').length} lễ tân, ${us.filter(u => u.role === 'admin').length} quản trị`,
+      head: ['Họ tên', 'Email', 'Điện thoại', 'Quyền'],
+      row: u => [`<b>${esc(u.name)}</b>`, esc(u.email), esc(u.phone), ROLE[u.role]],
+    });
+
+    async function renderCustomers() {
+      const [us, bs] = await Promise.all([API.getUsers('customer'), API.getBookings()]);
+      sub('customers', `${us.length} khách có tài khoản`);
+      const q = $('#cq').value.trim().toLowerCase();
+      const list = us.filter(u => `${u.name} ${u.email} ${u.phone}`.toLowerCase().includes(q));
+      $('#customers').innerHTML = list.length ? `<table>
+        <thead><tr><th>Khách</th><th>Liên hệ</th><th class="num">Số đơn</th><th>Lần đến gần nhất</th><th class="num">Đã chi</th></tr></thead>
+        <tbody>${list.map(u => {
+          const mine = bs.filter(b => b.customerId === u.id);
+          const spent = mine.filter(b => b.status === 'checked_out').reduce((s, b) => s + b.total, 0);
+          const last = mine.map(b => b.checkIn).sort().pop();
+          return `<tr><td><b>${esc(u.name)}</b></td><td>${esc(u.email)}<small>${esc(u.phone)}</small></td><td class="num">${mine.length}</td>
+            <td>${last ? fmtDate(last) : 'Chưa có'}</td><td class="num">${money(spent)}</td></tr>`;
+        }).join('')}</tbody></table>`
+        : `<div class="empty">Không có khách nào khớp "${esc(q)}".</div>`;
+    }
+    $('#cq').oninput = renderCustomers;
+
+    async function renderStats() {
+      const [s, rooms, rows] = await Promise.all([API.roomStats(), API.getRooms(), API.revenue($('#period').value)]);
+      const sum = rows.reduce((a, r) => a + r.total, 0), max = Math.max(1, ...rows.map(r => r.total));
+      sub('stats', `Số liệu tính đến ngày ${fmtDate(isoDate())}`);
+      $('#metrics').innerHTML = [
+        ['Đang có khách', `${s.occupied}/${s.total}`, `Lấp đầy ${s.total ? Math.round(s.occupied / s.total * 100) : 0}%`],
+        ['Phòng trống', s.available, 'Nhận khách được ngay'],
+        ['Đang bảo trì', s.maintenance, 'Tạm không nhận khách'],
+        ['Doanh thu', money(sum), 'Tính trên đơn đã trả phòng'],
+      ].map(([l, v, small]) => `<div class="metric"><span>${l}</span><strong>${v}</strong><small>${small}</small></div>`).join('');
+      $('#revenue').innerHTML = rows.length
+        ? rows.map(r => `<div class="report-row money"><span>${fmtDate(r.label)}</span><div><i style="width:${Math.max(3, r.total / max * 100)}%"></i></div><b>${money(r.total)}</b></div>`).join('')
+        : '<div class="empty">Chưa có đơn nào trả phòng.</div>';
+      $('#room-map').innerHTML = rooms.map(r => `<div class="room-tile ${r.status}"><span class="room-tile-top"><b>${esc(r.number)}</b><span>${STATUS[r.status]}</span></span><small>${esc(r.typeName)}</small></div>`).join('');
+    }
+    $('#period').onchange = renderStats;
+
+    const views = { stats: renderStats, types: renderTypes, rooms: renderRooms, staff: renderStaff, customers: renderCustomers };
+    setupTabs(name => views[name]());
+  </script>
+</body>
+</html>

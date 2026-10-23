@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lễ tân · SOLENA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="manager">
+    <aside class="sidebar"></aside>
+    <div class="manager-main">
+      <!-- 2.1 Quản lý đặt phòng -->
+      <section data-panel="bookings">
+        <div class="manager-heading"><div><h1>Đơn đặt phòng</h1><p></p></div></div>
+        <div class="filters" id="filters"></div>
+        <div class="panel"><div class="table-wrap" id="bookings"></div></div>
+      </section>
+
+      <!-- 2.2 Check-in -->
+      <section data-panel="checkin">
+        <div class="manager-heading"><div><h1>Nhận phòng</h1><p></p></div></div>
+        <div class="panel"><div class="table-wrap" id="checkin"></div></div>
+      </section>
+
+      <!-- 2.3 Check-out + 2.4 Dịch vụ phát sinh -->
+      <section data-panel="inhouse">
+        <div class="manager-heading"><div><h1>Khách đang ở</h1><p></p></div></div>
+        <div class="grid-2" id="inhouse"></div>
+      </section>
+    </div>
+  </div>
+  <dialog id="invoice" class="modal modal-wide"></dialog>
+
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderManager(requireRole('receptionist', 'admin'));
+    const views = { bookings: renderBookings, checkin: renderCheckin, inhouse: renderInhouse };
+    let tab, filter = 'pending', search = '';
+    setupTabs(name => views[tab = name]());
+
+    $('#filters').innerHTML = [['', 'Tất cả'], ...['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled'].map(s => [s, STATUS[s]])]
+      .map(([v, t]) => `<button class="pill ${v === filter ? 'active' : ''}" data-filter="${v}">${t}</button>`).join('')
+      + '<input type="search" id="q" placeholder="Mã đơn, tên hoặc SĐT" aria-label="Tìm đơn">';
+    $('#filters').onclick = e => {
+      if (e.target.dataset.filter === undefined) return;
+      filter = e.target.dataset.filter;
+      $$('#filters .pill').forEach(p => p.classList.toggle('active', p === e.target));
+      renderBookings();
+    };
+    $('#q').oninput = e => { search = e.target.value.trim().toLowerCase(); renderBookings(); };
+
+    const guestCell = b => `${esc(b.guest.name)}<small>${esc(b.guest.phone)}</small>`;
+    const btn = (act, b, text, cls = 'text-link') => `<button class="${cls}" data-act="${act}" data-id="${b.id}">${text}</button>`;
+    const empty = msg => `<div class="empty">${msg}</div>`;
+
+    /* 2.1 */
+    async function renderBookings() {
+      const all = await API.getBookings();
+      const pending = all.filter(b => b.status === 'pending').length;
+      sub('bookings', pending ? `${pending} đơn đang chờ duyệt` : 'Không có đơn nào chờ duyệt');
+      const bs = all.filter(b => (!filter || b.status === filter) && `${b.id} ${b.guest.name} ${b.guest.phone}`.toLowerCase().includes(search));
+      $('#bookings').innerHTML = bs.length ? `<table>
+        <thead><tr><th>Mã</th><th>Khách</th><th>Phòng</th><th>Ngày ở</th><th>Tổng</th><th></th></tr></thead>
+        <tbody>${bs.map(b => `<tr>
+          <td><b>${b.id}</b><small>${PAYMENT[b.payment]}</small></td><td>${guestCell(b)}</td>
+          <td>${esc(b.typeName)}<small>${b.roomNumber ? 'Phòng ' + esc(b.roomNumber) : 'Chưa gán phòng'}, ${b.guests} khách</small></td>
+          <td>${fmtDate(b.checkIn)}<small>đến ${fmtDate(b.checkOut)}</small></td>
+          <td>${money(b.total)}<small>${badge(b.status)}</small></td>
+          <td><div class="actions">${{
+            pending: btn('confirm', b, 'Duyệt', 'btn small') + btn('cancel', b, 'Hủy'),
+            confirmed: btn('cancel', b, 'Hủy'),
+            checked_out: btn('invoice', b, 'Hóa đơn'),
+          }[b.status] || ''}</div></td>
+        </tr>`).join('')}</tbody></table>`
+        : empty(search ? `Không tìm thấy đơn khớp "${esc(search)}".` : 'Không có đơn nào ở trạng thái này.');
+    }
+
+    /* 2.2 */
+    async function renderCheckin() {
+      const [bs, rooms] = await Promise.all([API.getBookings(), API.getRooms()]);
+      const list = bs.filter(b => b.status === 'confirmed').sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+      const today = isoDate(), todayCount = list.filter(b => b.checkIn === today).length;
+      sub('checkin', `${list.length} đơn đã xác nhận đang chờ nhận phòng, ${todayCount} đơn đến hôm nay`);
+      $('#checkin').innerHTML = list.length ? `<table>
+        <thead><tr><th>Mã</th><th>Khách</th><th>Loại phòng</th><th>Ngày đến</th><th>Gán phòng</th><th></th></tr></thead>
+        <tbody>${list.map(b => {
+          const free = rooms.filter(r => r.typeId === b.typeId && r.status === 'available');
+          return `<tr>
+            <td><b>${b.id}</b></td><td>${guestCell(b)}</td><td>${esc(b.typeName)}<small>${b.guests} khách</small></td>
+            <td>${fmtDate(b.checkIn)} ${b.checkIn === today ? '<span class="badge confirmed">Hôm nay</span>' : b.checkIn < today ? '<span class="badge pending">Trễ</span>' : ''}</td>
+            <td><div class="field" style="margin:0"><select id="room-${b.id}" aria-label="Chọn phòng cho ${b.id}">${free.length
+              ? free.map(r => `<option value="${r.id}">Phòng ${esc(r.number)}</option>`).join('')
+              : '<option value="">Hết phòng trống</option>'}</select></div></td>
+            <td><div class="actions">${btn('checkin', b, 'Nhận phòng', 'btn small')}</div></td></tr>`;
+        }).join('')}</tbody></table>`
+        : empty('Chưa có đơn nào chờ nhận phòng. Đơn cần được duyệt ở mục <a href="#bookings">Đơn đặt phòng</a> trước.');
+    }
+
+    /* 2.3 + 2.4 */
+    const billTable = (b, edit) => {
+      const n = nights(b.checkIn, b.checkOut), extra = edit ? '<td></td>' : '';
+      return `<div class="table-wrap"><table class="svc-table">
+        <thead><tr><th>Khoản</th><th class="num">SL</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th>${edit ? '<th></th>' : ''}</tr></thead>
+        <tbody><tr><td>Tiền phòng ${esc(b.typeName)}</td><td class="num">${n} đêm</td><td class="num">${money(b.roomTotal / n)}</td><td class="num">${money(b.roomTotal)}</td>${extra}</tr>
+        ${b.services.map((s, i) => `<tr><td>${esc(s.name)}</td><td class="num">${s.qty}</td><td class="num">${money(s.price)}</td><td class="num">${money(s.price * s.qty)}</td>
+          ${edit ? `<td><button class="text-link danger-text" data-act="rmsvc" data-id="${b.id}" data-i="${s.id ?? i}" aria-label="Xóa ${esc(s.name)}">Xóa</button></td>` : ''}</tr>`).join('')}</tbody></table></div>
+        <div class="total"><span>Tổng cộng</span><strong>${money(b.total)}</strong></div>`;
+    };
+
+    async function renderInhouse() {
+      const [bs, svcs] = await Promise.all([API.getBookings(), API.getServices()]);
+      const list = bs.filter(b => b.status === 'checked_in');
+      sub('inhouse', list.length ? `${list.length} phòng đang có khách` : 'Hiện không có phòng nào có khách');
+      const options = svcs.map(s => `<option data-name="${esc(s.name)}" data-price="${s.price}">${esc(s.name)} (${money(s.price)})</option>`).join('');
+      $('#inhouse').innerHTML = list.map(b => `<article class="panel">
+        <div class="panel-head"><div><h2>Phòng ${esc(b.roomNumber)}</h2><p class="meta">${esc(b.typeName)}, mã ${b.id}</p></div>${badge(b.status)}</div>
+        <p>${esc(b.guest.name)}, ${esc(b.guest.phone)}<br><span class="meta">Ở từ ${fmtDate(b.checkIn)} đến ${fmtDate(b.checkOut)}, ${PAYMENT[b.payment].toLowerCase()}</span></p>
+        ${billTable(b, true)}
+        <form class="svc" data-id="${b.id}">
+          <label class="field"><span>Dịch vụ</span><select name="svc">${options}<option value="other">Khác / bồi thường hư hại</option></select></label>
+          <label class="field other" hidden><span>Nội dung</span><input name="name" placeholder="Ví dụ: vỡ ly"></label>
+          <label class="field other" hidden><span>Đơn giá</span><input name="price" type="number" min="0" step="1000"></label>
+          <label class="field"><span>SL</span><input name="qty" type="number" min="1" value="1" required></label>
+          <button class="ghost" type="submit">Thêm</button>
+        </form>
+        <div class="row">${btn('checkout', b, 'Trả phòng và thanh toán', 'btn wide')}</div>
+      </article>`).join('') || empty('Hiện không có phòng nào có khách.');
+    }
+
+    function showInvoice(b) {
+      const d = $('#invoice');
+      d.innerHTML = `<form method="dialog" class="no-print"><button class="modal-close" aria-label="Đóng">×</button></form>
+        <h2>Hóa đơn ${b.id}</h2><p class="meta">SOLENA Resort, 86 Trần Phú, Nha Trang. ĐT 0258 3888 999</p>
+        <div class="detail-summary">
+          <div><span>Khách hàng</span><b>${esc(b.guest.name)}, ${esc(b.guest.phone)}</b></div>
+          <div><span>Phòng</span><b>${esc(b.roomNumber || '')} (${esc(b.typeName)})</b></div>
+          <div><span>Ngày ở</span><b>${fmtDate(b.checkIn)} – ${fmtDate(b.checkOut)}</b></div>
+          <div><span>Thanh toán</span><b>${PAYMENT[b.payment]}, ngày ${fmtDate(b.paidAt)}</b></div>
+        </div>
+        ${billTable(b)}
+        <form method="dialog" class="manager-actions no-print"><button type="button" class="btn" onclick="print()">In hóa đơn</button><button class="ghost">Đóng</button></form>`;
+      d.showModal();
+    }
+
+    document.addEventListener('click', e => {
+      const el = e.target.closest('[data-act]');
+      if (!el) return;
+      const { act, id } = el.dataset;
+      run(async () => {
+        if (act === 'confirm') { await API.confirmBooking(id); toast('Đã duyệt đơn ' + id); }
+        if (act === 'cancel') { if (!confirm(`Hủy đơn ${id}?`)) return; await API.cancelBooking(id); toast('Đã hủy đơn ' + id); }
+        if (act === 'checkin') {
+          const roomId = $(`#room-${id}`).value;
+          if (!roomId) return toast('Không còn phòng trống cùng loại', 'danger');
+          await API.checkIn(id, roomId); toast('Đã nhận phòng cho đơn ' + id);
+        }
+        if (act === 'rmsvc') await API.removeService(id, el.dataset.i);
+        if (act === 'checkout') { if (!confirm(`Trả phòng và chốt hóa đơn ${id}?`)) return; showInvoice(await API.checkOut(id)); toast('Đã trả phòng'); }
+        if (act === 'invoice') return showInvoice((await API.getBookings()).find(b => b.id === id));
+        views[tab]();
+      });
+    });
+
+    document.addEventListener('change', e => {
+      if (e.target.name === 'svc') $$('.other', e.target.form).forEach(l => l.hidden = e.target.value !== 'other');
+    });
+
+    document.addEventListener('submit', e => {
+      const f = e.target;
+      if (!f.matches('.svc')) return;
+      e.preventDefault();
+      const o = f.svc.selectedOptions[0], el = f.elements;
+      const item = o.value === 'other'
+        ? { name: el.name.value, price: el.price.value, qty: el.qty.value }
+        : { name: o.dataset.name, price: o.dataset.price, qty: el.qty.value };
+      if (!item.name.trim() || item.price === '' || +item.price < 0) return toast('Nhập nội dung và đơn giá', 'danger');
+      run(async () => { await API.addService(f.dataset.id, item); toast('Đã thêm ' + item.name); renderInhouse(); });
+    });
+  </script>
+</body>
+</html>

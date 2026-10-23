@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f6f0">
+  <title>Phòng nghỉ · SOLENA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+  <main id="app"></main>
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    // rooms.html            → danh sách (lọc theo ngày/số khách nếu có trên URL)
+    // rooms.html?id=t1      → chi tiết loại phòng
+    const id = qs('id');
+    const query = ['checkIn', 'checkOut', 'guests'].filter(qs).map(k => `&${k}=${encodeURIComponent(qs(k))}`).join('');
+    id ? detail() : list();
+
+    async function list() {
+      const all = await API.getRoomTypes();
+      $('#app').innerHTML = `<section class="page-hero"><div>
+          <h1>Phòng nghỉ</h1>
+          <p>${all.length} loại phòng, giá từ ${money(Math.min(...all.map(t => t.price)))} đến ${money(Math.max(...all.map(t => t.price)))} một đêm. Giá đã gồm thuế, chưa gồm dịch vụ phát sinh.</p></div>
+          ${img(IMG.room, 'Phòng nghỉ', 'page-hero-image')}</section>
+        <section class="section search-section">
+          <form class="finder">${searchFields()}<button class="btn" type="submit">Tìm phòng</button></form>
+          <div class="section-head"><h2 id="title"></h2></div>
+          <div class="cards" id="list"></div></section>`;
+      const f = $('.finder');
+      initDateRange(f.checkIn, f.checkOut);
+      f.guests.value = qs('guests') || 2;
+      const hasDates = qs('checkIn') && qs('checkOut');
+      $('#title').textContent = hasDates ? `Phòng trống từ ${fmtDate(qs('checkIn'))} đến ${fmtDate(qs('checkOut'))}` : 'Tất cả loại phòng';
+      await run(async () => {
+        const types = hasDates ? await API.searchAvailable({ checkIn: qs('checkIn'), checkOut: qs('checkOut'), guests: +qs('guests') || 1 }) : all;
+        $('#list').innerHTML = types.map(t => typeCard(t, query)).join('');
+        if (!types.length) $('#list').outerHTML = `<div class="empty">Không có phòng nào cho ${qs('guests')} khách. Phòng lớn nhất ở được ${Math.max(...all.map(t => t.capacity))} khách.</div>`;
+      });
+    }
+
+    async function detail() {
+      const t = (await API.getRoomTypes()).find(x => x.id === id);
+      if (!t) return $('#app').innerHTML = '<div class="empty section">Không tìm thấy phòng này. <a href="rooms.html">Xem danh sách phòng</a></div>';
+      document.title = `Phòng ${t.name} · SOLENA`;
+      $('#app').innerHTML = `<div class="breadcrumb"><a href="index.html">Trang chủ</a> / <a href="rooms.html?${query.slice(1)}">Phòng nghỉ</a> / ${esc(t.name)}</div>
+        <section class="detail-grid">
+          <div class="detail-gallery">${img(t.image, 'Ảnh phòng ' + t.name)}</div>
+          <div class="detail-info">
+            <h1>Phòng ${esc(t.name)}</h1><p class="lead">${esc(t.description)}</p>
+            <div class="specs"><div><b>${money(t.price)}</b><span>một đêm</span></div><div><b>${t.capacity} khách</b><span>tối đa</span></div></div>
+            <div class="booking-box"><h2>Chọn ngày</h2>
+              <form id="detail-form" class="form-grid" action="booking.html"><input type="hidden" name="typeId" value="${t.id}">${searchFields(t.capacity)}</form>
+              <div class="price-lines" id="lines"></div>
+              <div class="total"><span>Tạm tính</span><strong id="total"></strong></div>
+              <p class="fine">Đồ uống, giặt ủi và các dịch vụ khác tính khi trả phòng.</p>
+              <button class="btn wide" form="detail-form" type="submit">Đặt phòng</button></div>
+          </div></section>
+        <section class="section compact"><h2>Trong phòng có</h2><div class="chips">${t.amenities.map(a => `<span>${esc(a)}</span>`).join('')}</div></section>`;
+      const f = $('#detail-form');
+      initDateRange(f.checkIn, f.checkOut);
+      f.guests.value = Math.min(+qs('guests') || 2, t.capacity);
+      const update = () => {
+        const n = nights(f.checkIn.value, f.checkOut.value);
+        $('#lines').innerHTML = `<span>${money(t.price)} x ${n} đêm</span><b>${money(t.price * n)}</b>`;
+        $('#total').textContent = money(t.price * n);
+      };
+      f.addEventListener('change', update);
+      update();
+    }
+  </script>
+</body>
+</html>

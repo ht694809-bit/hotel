@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f6f0">
+  <title>Đơn của tôi · SOLENA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+  <main class="section narrow">
+    <h1>Đơn đặt phòng của tôi</h1>
+    <p class="lead" id="profile"></p>
+    <div id="list"></div>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const u = requireRole('customer');
+    $('#profile').textContent = `${u.name}, ${u.email}, ${u.phone}`;
+
+    async function load() {
+      const bs = await API.myBookings();
+      $('#list').innerHTML = bs.map(b => `<article class="order-card">
+          <div><span class="fine">Mã ${b.id}, đặt ngày ${fmtDate(b.createdAt)}</span>
+            <h3>Phòng ${esc(b.typeName)}${b.roomNumber ? ` ${esc(b.roomNumber)}` : ''}</h3>
+            <p>${fmtDate(b.checkIn)} – ${fmtDate(b.checkOut)}, ${nights(b.checkIn, b.checkOut)} đêm, ${b.guests} khách</p>
+            <p>${PAYMENT[b.payment]}</p></div>
+          <div class="order-side">${badge(b.status)}<strong>${money(b.total)}</strong>
+            ${b.status === 'pending' ? `<button class="ghost small danger-text" data-cancel="${b.id}">Hủy đơn</button>` : ''}</div>
+        </article>`).join('') || '<div class="empty">Bạn chưa đặt phòng nào. <a href="rooms.html">Xem phòng</a></div>';
+    }
+    load();
+
+    $('#list').onclick = e => {
+      const id = e.target.dataset.cancel;
+      if (id && confirm(`Hủy đơn ${id}?`)) run(async () => { await API.cancelBooking(id); toast('Đã hủy đơn ' + id); load(); });
+    };
+  </script>
+</body>
+</html>

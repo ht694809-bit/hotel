@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f6f0">
+  <title>Đặt phòng · SOLENA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+  <main class="section checkout">
+    <h1>Đặt phòng</h1>
+    <div class="checkout-grid">
+      <form id="f" class="panel">
+        <h2>Phòng và ngày ở</h2>
+        <div class="form-grid" id="dates">
+          <label class="field full"><span>Loại phòng</span><select name="typeId" required></select></label>
+        </div>
+
+        <h2>Thông tin liên hệ</h2>
+        <p id="login-hint" class="fine" hidden>Đã có tài khoản? <a id="login-link" class="text-link">Đăng nhập</a> để xem lại đơn sau này.</p>
+        <div class="form-grid">
+          <label class="field"><span>Họ và tên</span><input name="name" required autocomplete="name"></label>
+          <label class="field"><span>Số điện thoại</span><input name="phone" type="tel" required pattern="0[0-9]{9,10}" title="Số điện thoại 10–11 số, bắt đầu bằng 0" autocomplete="tel"></label>
+          <label class="field full"><span>Email</span><input name="email" type="email" autocomplete="email"></label>
+          <label class="field full"><span>Ghi chú cho khách sạn</span><input name="note" maxlength="250" placeholder="Ví dụ: đến lúc 22:00, cần giường phụ"></label>
+        </div>
+
+        <h2>Thanh toán</h2>
+        <label class="pay-option"><input type="radio" name="payment" value="cash" checked> Trả tiền mặt tại quầy khi nhận phòng</label>
+        <label class="pay-option"><input type="radio" name="payment" value="transfer"> Chuyển khoản ngân hàng</label>        <label class="check"><input type="checkbox" required><span>Tôi đã kiểm tra lại ngày ở và thông tin liên hệ.</span></label>
+        <button class="btn wide" type="submit">Gửi yêu cầu đặt phòng</button>
+      </form>
+      <aside class="summary" id="summary"></aside>
+    </div>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const f = $('#f'), user = API.currentUser();
+    let types = [];
+    $('#dates').insertAdjacentHTML('beforeend', searchFields());
+    initDateRange(f.checkIn, f.checkOut);
+    f.guests.value = qs('guests') || 2;
+
+    if (user) for (const k of ['name', 'phone', 'email']) f.elements[k].value = user[k] || '';
+    else {
+      $('#login-hint').hidden = false;
+      $('#login-link').href = 'login.html?next=' + encodeURIComponent('booking.html' + location.search) + '#login';
+    }
+
+    API.getRoomTypes().then(ts => {
+      types = ts;
+      f.typeId.innerHTML = ts.map(t => `<option value="${t.id}">${esc(t.name)} (${money(t.price)}/đêm, tối đa ${t.capacity} khách)</option>`).join('');
+      if (qs('typeId')) f.typeId.value = qs('typeId');
+      update();
+    });
+    f.addEventListener('input', update);
+    f.addEventListener('change', update);
+
+    function update() {
+      const t = types.find(x => x.id === f.typeId.value);
+      if (!t) return;
+      f.guests.max = t.capacity;
+      const n = nights(f.checkIn.value, f.checkOut.value);
+      $('#summary').innerHTML = `<h2>Đơn của bạn</h2>${img(t.image, t.name)}
+        <h3>Phòng ${esc(t.name)}</h3><p>${fmtDate(f.checkIn.value)} – ${fmtDate(f.checkOut.value)}, ${n} đêm, ${f.guests.value} khách</p>
+        <div class="price-lines"><span>${money(t.price)} x ${n} đêm</span><b>${money(t.price * n)}</b></div>
+        <div class="total"><span>Tạm tính</span><strong>${money(t.price * n)}</strong></div>
+        <p class="fine">Dịch vụ dùng thêm trong thời gian ở sẽ cộng vào hóa đơn khi trả phòng.</p>`;
+    }
+
+    f.addEventListener('submit', e => {
+      e.preventDefault();
+      run(async () => done(await API.createBooking(formData(f))));
+    });
+
+    function done(b) {
+      const pay = {
+        cash: '<p>Bạn thanh toán tại quầy lễ tân khi nhận phòng.</p>',
+        // TODO: thay bằng thông tin tài khoản thật của khách sạn
+        transfer: `<div class="note-box">Chuyển khoản tới <b>Vietcombank 0123 456 789</b> (CTY TNHH SOLENA RESORT), nội dung ghi <b>${b.id}</b>.</div>`,
+      }[b.payment];
+      $('main').outerHTML = `<main class="success">
+        <h1>Đã nhận yêu cầu đặt phòng</h1>
+        <p>Mã đơn của bạn</p><strong class="booking-code">${b.id}</strong>
+        <p>Phòng ${esc(b.typeName)}, ${fmtDate(b.checkIn)} – ${fmtDate(b.checkOut)}, ${b.guests} khách. Tạm tính <b>${money(b.total)}</b>.</p>
+        ${pay}<p>Lễ tân sẽ gọi xác nhận qua số điện thoại bạn để lại.</p>
+        ${user?.role === 'customer' ? '<a class="btn" href="account.html">Xem đơn của tôi</a>' : '<a class="btn" href="index.html">Về trang chủ</a>'}</main>`;
+      scrollTo(0, 0);
+    }
+  </script>
+</body>
+</html>
