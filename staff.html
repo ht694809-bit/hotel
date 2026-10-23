@@ -152,7 +152,7 @@
         }
         if (act === 'rmsvc') await API.removeService(id, el.dataset.i);
         if (act === 'checkout') { if (!confirm(`Trả phòng và chốt hóa đơn ${id}?`)) return; showInvoice(await API.checkOut(id)); toast('Đã trả phòng'); }
-        if (act === 'invoice') return showInvoice((await API.getBookings()).find(b => b.id === id));
+        if (act === 'invoice') return showInvoice((await API.getBookings()).find(b => String(b.id) === id));
         views[tab]();
       });
     });

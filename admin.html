@@ -116,7 +116,7 @@
       };
       box.onclick = e => {
         const { edit, del } = e.target.dataset;
-        if (edit) open(items.find(i => i.id === edit));
+        if (edit) open(items.find(i => String(i.id) === edit));
         if (del && confirm('Xóa mục này?')) run(async () => { await remove(del); toast('Đã xóa'); render(); });
       };
       return render;

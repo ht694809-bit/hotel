@@ -42,7 +42,7 @@
     }
 
     async function detail() {
-      const t = (await API.getRoomTypes()).find(x => x.id === id);
+      const t = (await API.getRoomTypes()).find(x => String(x.id) === id);
       if (!t) return $('#app').innerHTML = '<div class="empty section">Không tìm thấy phòng này. <a href="rooms.html">Xem danh sách phòng</a></div>';
       document.title = `Phòng ${t.name} · SOLENA`;
       $('#app').innerHTML = `<div class="breadcrumb"><a href="index.html">Trang chủ</a> / <a href="rooms.html?${query.slice(1)}">Phòng nghỉ</a> / ${esc(t.name)}</div>

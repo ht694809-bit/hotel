@@ -22,10 +22,10 @@ Tài khoản mẫu: `admin@solena.vn / admin123`, `letan@solena.vn / 123456`, `k
 | Hợp đồng API | Cả hai | `HUONG-DAN-BACKEND.md` |
 
 `js/api.js` đang chạy bằng dữ liệu giả. Backend làm xong endpoint nào thì đổi hàm tương ứng trong
-`js/api.js` sang gọi `api/` (xem `HUONG-DAN-BACKEND.md`, Bước 8).
+`js/api.js` sang gọi `api/` (xem `HUONG-DAN-BACKEND.md`, mục 10 – Phụ lục A).
 
 **Endpoint backend đã có:** `auth/login`, `auth/register`, `auth/logout`, `room-types`, `room-types/available`,
-`bookings` (GET), `bookings/{id}/confirm`. Các endpoint còn lại xem Bước 6 trong hướng dẫn.
+`bookings` (GET), `bookings/{id}/confirm`. Các endpoint còn lại xem mục 6 và 7 trong `HUONG-DAN-BACKEND.md`.
 
 ## Quy trình làm chung
 

@@ -62,7 +62,7 @@
     f.addEventListener('change', update);
 
     function update() {
-      const t = types.find(x => x.id === f.typeId.value);
+      const t = types.find(x => String(x.id) === f.typeId.value);
       if (!t) return;
       f.guests.max = t.capacity;
       const n = nights(f.checkIn.value, f.checkOut.value);
