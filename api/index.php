@@ -1,17 +1,15 @@
 <?php
-/* Mọi request /api/... đều vào đây (xem .htaccess). Danh sách endpoint: HUONG-DAN-BACKEND.md, Bước 6. */
-ini_set('display_errors', '0'); // cảnh báo PHP lẫn vào sẽ làm hỏng JSON; lỗi ghi vào xampp/apache/logs/error.log
+ini_set('display_errors', '0');
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 require __DIR__ . '/db.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
-$path = trim($_GET['path'] ?? '', '/');            // vd: bookings/12/confirm
-$p = explode('/', $path);                          // ['bookings', '12', 'confirm']
-$body = json_decode(file_get_contents('php://input'), true) ?? []; // JSON body ($_POST sẽ rỗng)
+$path = trim($_GET['path'] ?? '', '/');
+$p = explode('/', $path);
+$body = json_decode(file_get_contents('php://input'), true) ?? [];
 
 try {
-    /* ===== Tài khoản ===== */
     if ($method === 'POST' && $path === 'auth/login') {
         $s = $pdo->prepare('SELECT * FROM users WHERE email = ?');
         $s->execute([strtolower(trim($body['email'] ?? ''))]);
@@ -46,7 +44,6 @@ try {
         ok();
     }
 
-    /* ===== Loại phòng ===== */
     if ($method === 'GET' && $path === 'room-types') {
         ok(array_map('typeOut', $pdo->query('SELECT * FROM room_types ORDER BY price')->fetchAll()));
     }
@@ -55,7 +52,6 @@ try {
         $in = $_GET['checkIn'] ?? '';
         $out = $_GET['checkOut'] ?? '';
         if (!($out > $in)) fail(400, 'Ngày trả phòng phải sau ngày nhận phòng');
-        // còn trống = phòng không bảo trì − đơn còn hiệu lực bị trùng ngày
         $s = $pdo->prepare("SELECT t.*, GREATEST(0,
                 (SELECT COUNT(*) FROM rooms r WHERE r.type_id = t.id AND r.status <> 'maintenance')
               - (SELECT COUNT(*) FROM bookings b WHERE b.type_id = t.id
@@ -66,7 +62,6 @@ try {
         ok(array_map('typeOut', $s->fetchAll()));
     }
 
-    /* ===== Đơn đặt phòng ===== */
     if ($method === 'GET' && $path === 'bookings') {
         requireRole('receptionist', 'admin');
         $rows = $pdo->query(BOOKING_SQL . ' ORDER BY b.id DESC')->fetchAll();
@@ -80,8 +75,6 @@ try {
         if (!$s->rowCount()) fail(400, 'Chỉ duyệt được đơn đang chờ');
         ok();
     }
-
-    // TODO: các endpoint còn lại theo HUONG-DAN-BACKEND.md, Bước 6
 
     fail(404, 'Không tìm thấy API');
 } catch (PDOException $e) {

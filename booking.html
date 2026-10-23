@@ -81,7 +81,6 @@
     function done(b) {
       const pay = {
         cash: '<p>Bạn thanh toán tại quầy lễ tân khi nhận phòng.</p>',
-        // TODO: thay bằng thông tin tài khoản thật của khách sạn
         transfer: `<div class="note-box">Chuyển khoản tới <b>Vietcombank 0123 456 789</b> (CTY TNHH SOLENA RESORT), nội dung ghi <b>${b.id}</b>.</div>`,
       }[b.payment];
       $('main').outerHTML = `<main class="success">

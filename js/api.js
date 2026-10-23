@@ -1,13 +1,3 @@
-/* Lớp API của frontend — MỌI trang chỉ gọi dữ liệu qua object API này.
- * Hiện tại chạy bằng dữ liệu giả lưu trong localStorage để frontend chạy độc lập.
- * Khi backend xong: thay thân từng hàm bằng fetch tới endpoint ghi ở comment phía trên,
- * giữ nguyên tên hàm + hình dạng dữ liệu trả về (Promise) → các trang HTML không phải sửa.
- * Mọi kiểm tra quyền/hợp lệ ở đây chỉ để demo, backend phải tự kiểm tra lại.
- *
- * Tài khoản demo: admin@solena.vn / admin123 · letan@solena.vn / 123456 · khach@gmail.com / 123456
- */
-
-// Ngày dạng YYYY-MM-DD theo giờ máy (không dùng toISOString vì lệch múi giờ UTC+7)
 function isoDate(offset = 0, from) {
   const d = from ? new Date(from + 'T00:00') : new Date();
   d.setDate(d.getDate() + offset);
@@ -76,7 +66,6 @@ const API = (() => {
     roomNumber: db.rooms.find(r => r.id === b.roomId)?.number || null,
   });
   const findBooking = id => db.bookings.find(b => b.id === id);
-  // Số phòng còn trống của 1 loại trong khoảng ngày = phòng không bảo trì − đơn còn hiệu lực bị trùng ngày
   const freeCount = (typeId, from, to) =>
     db.rooms.filter(r => r.typeId === typeId && r.status !== 'maintenance').length -
     db.bookings.filter(b => b.typeId === typeId && ACTIVE.includes(b.status) && b.checkIn < to && from < b.checkOut).length;
@@ -89,10 +78,7 @@ const API = (() => {
   };
 
   return {
-    /* ===== Tài khoản ===== */
-    // POST /api/auth/login {email,password} → {user}   (PHP lưu đăng nhập bằng $_SESSION)
     login,
-    // POST /api/auth/register {name,email,phone,password} → {user}
     register(d) {
       if (db.users.some(x => x.email.toLowerCase() === d.email.trim().toLowerCase())) return fail('Email đã được sử dụng');
       db.users.push({ id: newId('u'), name: d.name.trim(), email: d.email.trim(), phone: d.phone.trim(), password: d.password, role: 'customer' });
@@ -100,32 +86,24 @@ const API = (() => {
       return login(d.email, d.password);
     },
     logout() { localStorage.removeItem(SESSION_KEY); },
-    currentUser, // đọc user (+ token) đã lưu sau khi login
+    currentUser,
 
-    /* ===== Loại phòng ===== */
-    // GET /api/room-types
     getRoomTypes: () => ok(db.roomTypes),
-    // GET /api/room-types/available?checkIn=&checkOut=&guests= → RoomType[] kèm field available
     searchAvailable({ checkIn, checkOut, guests = 1 }) {
       if (!(checkOut > checkIn)) return fail('Ngày trả phòng phải sau ngày nhận phòng');
       return ok(db.roomTypes.filter(t => t.capacity >= guests).map(t => ({ ...t, available: Math.max(0, freeCount(t.id, checkIn, checkOut)) })));
     },
-    // POST /api/room-types  |  PUT /api/room-types/:id
     saveRoomType(t) {
       const data = { name: t.name.trim(), price: +t.price, capacity: +t.capacity, image: t.image || '', amenities: t.amenities || [], description: t.description || '' };
       if (t.id) Object.assign(db.roomTypes.find(x => x.id === t.id), data); else db.roomTypes.push({ id: newId('t'), ...data });
       save(); return ok();
     },
-    // DELETE /api/room-types/:id
     deleteRoomType(id) {
       if (db.rooms.some(r => r.typeId === id)) return fail('Còn phòng thuộc loại này, hãy xóa hoặc chuyển phòng trước');
       db.roomTypes = db.roomTypes.filter(t => t.id !== id); save(); return ok();
     },
 
-    /* ===== Phòng cụ thể ===== */
-    // GET /api/rooms → Room[] kèm typeName
     getRooms: () => ok(db.rooms.map(r => ({ ...r, typeName: db.roomTypes.find(t => t.id === r.typeId)?.name || '—' }))),
-    // POST /api/rooms  |  PUT /api/rooms/:id   (status: available | maintenance; occupied do check-in/out tự đặt)
     saveRoom(r) {
       const number = r.number.trim(), cur = db.rooms.find(x => x.id === r.id);
       if (db.rooms.some(x => x.number === number && x.id !== r.id)) return fail('Số phòng đã tồn tại');
@@ -133,15 +111,11 @@ const API = (() => {
       if (cur) Object.assign(cur, data); else db.rooms.push({ id: newId('r'), ...data });
       save(); return ok();
     },
-    // DELETE /api/rooms/:id
     deleteRoom(id) {
       if (db.rooms.find(r => r.id === id)?.status === 'occupied') return fail('Phòng đang có khách, không thể xóa');
       db.rooms = db.rooms.filter(r => r.id !== id); save(); return ok();
     },
 
-    /* ===== Đặt phòng ===== */
-    // POST /api/bookings {typeId,checkIn,checkOut,guests,name,phone,email,note,payment}
-    //   → Booking   (payment: 'cash' | 'transfer')
     createBooking(d) {
       const t = db.roomTypes.find(x => x.id === d.typeId);
       if (!t) return fail('Loại phòng không tồn tại');
@@ -161,23 +135,18 @@ const API = (() => {
       db.bookings.push(b); save();
       return ok(full(b));
     },
-    // GET /api/bookings  (lễ tân / admin)
     getBookings: () => ok(db.bookings.map(full).reverse()),
-    // GET /api/bookings/me  (khách đang đăng nhập)
     myBookings: () => ok(db.bookings.filter(b => b.customerId === currentUser()?.id).map(full).reverse()),
-    // PATCH /api/bookings/:id/confirm
     confirmBooking(id) {
       const b = findBooking(id);
       if (b?.status !== 'pending') return fail('Chỉ duyệt được đơn đang chờ');
       b.status = 'confirmed'; save(); return ok();
     },
-    // PATCH /api/bookings/:id/cancel
     cancelBooking(id) {
       const b = findBooking(id);
       if (!['pending', 'confirmed'].includes(b?.status)) return fail('Không thể hủy đơn này');
       b.status = 'cancelled'; save(); return ok();
     },
-    // POST /api/bookings/:id/check-in {roomId}
     checkIn(id, roomId) {
       const b = findBooking(id), r = db.rooms.find(x => x.id === roomId);
       if (b?.status !== 'confirmed') return fail('Đơn chưa được xác nhận');
@@ -185,20 +154,17 @@ const API = (() => {
       Object.assign(b, { roomId, status: 'checked_in' }); r.status = 'occupied';
       save(); return ok();
     },
-    // POST /api/bookings/:id/services {name,price,qty}
     addService(id, s) {
       const b = findBooking(id);
       if (b?.status !== 'checked_in') return fail('Khách không còn ở trong phòng');
       b.services.push({ name: s.name.trim(), price: +s.price, qty: +s.qty || 1 });
       save(); return ok(full(b));
     },
-    // DELETE /api/bookings/:id/services/:serviceId   (bản giả không có id dòng nên dùng vị trí)
     removeService(id, i) {
       const b = findBooking(id);
       if (b?.status !== 'checked_in') return fail('Không thể sửa hóa đơn đã chốt');
       b.services.splice(+i, 1); save(); return ok(full(b));
     },
-    // POST /api/bookings/:id/check-out → Booking đã chốt (dùng in hóa đơn)
     checkOut(id) {
       const b = findBooking(id);
       if (b?.status !== 'checked_in') return fail('Đơn không ở trạng thái đang ở');
@@ -207,13 +173,9 @@ const API = (() => {
       if (r) r.status = 'available';
       save(); return ok(full(b));
     },
-    // GET /api/services  (danh mục dịch vụ phát sinh)
     getServices: () => ok(db.services),
 
-    /* ===== Người dùng ===== */
-    // GET /api/users?role=
     getUsers: role => ok(db.users.filter(u => !role || u.role === role).map(pub)),
-    // POST /api/users  |  PUT /api/users/:id   (admin tạo tài khoản nhân viên + phân quyền)
     saveUser(u) {
       const email = u.email.trim().toLowerCase(), cur = db.users.find(x => x.id === u.id);
       if (db.users.some(x => x.email.toLowerCase() === email && x.id !== u.id)) return fail('Email đã được sử dụng');
@@ -222,14 +184,11 @@ const API = (() => {
       if (cur) Object.assign(cur, data); else db.users.push({ id: newId('u'), ...data });
       save(); return ok();
     },
-    // DELETE /api/users/:id
     deleteUser(id) {
       if (id === currentUser()?.id) return fail('Không thể xóa tài khoản đang đăng nhập');
       db.users = db.users.filter(u => u.id !== id); save(); return ok();
     },
 
-    /* ===== Thống kê ===== */
-    // GET /api/stats/revenue?period=day|month|year → [{label:'2026-10-24'|'2026-10'|'2026', total}]
     revenue(period) {
       const len = { day: 10, month: 7, year: 4 }[period], map = {};
       db.bookings.filter(b => b.status === 'checked_out').forEach(b => {
@@ -238,7 +197,6 @@ const API = (() => {
       });
       return ok(Object.entries(map).sort().map(([label, total]) => ({ label, total })));
     },
-    // GET /api/stats/rooms → {total, available, occupied, maintenance}
     roomStats() {
       const c = { total: db.rooms.length, available: 0, occupied: 0, maintenance: 0 };
       db.rooms.forEach(r => c[r.status]++);

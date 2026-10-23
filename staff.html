@@ -10,20 +10,17 @@
   <div class="manager">
     <aside class="sidebar"></aside>
     <div class="manager-main">
-      <!-- 2.1 Quản lý đặt phòng -->
       <section data-panel="bookings">
         <div class="manager-heading"><div><h1>Đơn đặt phòng</h1><p></p></div></div>
         <div class="filters" id="filters"></div>
         <div class="panel"><div class="table-wrap" id="bookings"></div></div>
       </section>
 
-      <!-- 2.2 Check-in -->
       <section data-panel="checkin">
         <div class="manager-heading"><div><h1>Nhận phòng</h1><p></p></div></div>
         <div class="panel"><div class="table-wrap" id="checkin"></div></div>
       </section>
 
-      <!-- 2.3 Check-out + 2.4 Dịch vụ phát sinh -->
       <section data-panel="inhouse">
         <div class="manager-heading"><div><h1>Khách đang ở</h1><p></p></div></div>
         <div class="grid-2" id="inhouse"></div>
@@ -55,7 +52,6 @@
     const btn = (act, b, text, cls = 'text-link') => `<button class="${cls}" data-act="${act}" data-id="${b.id}">${text}</button>`;
     const empty = msg => `<div class="empty">${msg}</div>`;
 
-    /* 2.1 */
     async function renderBookings() {
       const all = await API.getBookings();
       const pending = all.filter(b => b.status === 'pending').length;
@@ -77,7 +73,6 @@
         : empty(search ? `Không tìm thấy đơn khớp "${esc(search)}".` : 'Không có đơn nào ở trạng thái này.');
     }
 
-    /* 2.2 */
     async function renderCheckin() {
       const [bs, rooms] = await Promise.all([API.getBookings(), API.getRooms()]);
       const list = bs.filter(b => b.status === 'confirmed').sort((a, b) => a.checkIn.localeCompare(b.checkIn));
@@ -98,7 +93,6 @@
         : empty('Chưa có đơn nào chờ nhận phòng. Đơn cần được duyệt ở mục <a href="#bookings">Đơn đặt phòng</a> trước.');
     }
 
-    /* 2.3 + 2.4 */
     const billTable = (b, edit) => {
       const n = nights(b.checkIn, b.checkOut), extra = edit ? '<td></td>' : '';
       return `<div class="table-wrap"><table class="svc-table">

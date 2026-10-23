@@ -15,8 +15,6 @@
   <script src="js/api.js"></script>
   <script src="js/common.js"></script>
   <script>
-    // rooms.html            → danh sách (lọc theo ngày/số khách nếu có trên URL)
-    // rooms.html?id=t1      → chi tiết loại phòng
     const id = qs('id');
     const query = ['checkIn', 'checkOut', 'guests'].filter(qs).map(k => `&${k}=${encodeURIComponent(qs(k))}`).join('');
     id ? detail() : list();

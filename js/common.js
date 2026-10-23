@@ -1,10 +1,9 @@
-/* Hàm dùng chung cho mọi trang. Nạp SAU api.js. */
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const qs = k => new URLSearchParams(location.search).get(k);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => Number(n || 0).toLocaleString('vi-VN') + 'đ';
-const fmtDate = s => s ? s.split('-').reverse().join('/') : ''; // 2026-10-24 → 24/10/2026, 2026-10 → 10/2026
+const fmtDate = s => s ? s.split('-').reverse().join('/') : '';
 const formData = f => Object.fromEntries(new FormData(f));
 const IMG = { room: 'public/images/room.webp', pool: 'public/images/pool.webp', spa: 'public/images/spa.webp' };
 
@@ -29,7 +28,6 @@ const searchFields = (max = 10) =>
   field('Trả phòng', '<input type="date" name="checkOut" required>') +
   field('Số khách', `<input type="number" name="guests" min="1" max="${max}" value="2" required>`);
 
-// Ràng buộc cặp ngày nhận/trả: không chọn quá khứ, trả phòng luôn sau nhận phòng ít nhất 1 đêm
 function initDateRange(a, b) {
   a.min = isoDate();
   a.value = qs('checkIn') >= a.min ? qs('checkIn') : a.min;
@@ -46,7 +44,6 @@ function toast(msg, type = '') {
   clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-// Chạy 1 thao tác async, lỗi thì hiện toast thay vì im lặng
 async function run(fn) {
   try { return await fn(); } catch (e) { toast(e.message, 'danger'); }
 }
@@ -60,7 +57,6 @@ function requireRole(...roles) {
   return u;
 }
 
-// Panel theo #hash: mỗi khối [data-panel], link [data-tab] được tô active
 function setupTabs(onShow) {
   const panels = $$('[data-panel]');
   const show = () => {
@@ -78,7 +74,6 @@ function setupTabs(onShow) {
 const logout = () => { API.logout(); location.href = 'index.html'; };
 const here = location.pathname.split('/').pop() || 'index.html';
 
-/* ----- Khung trang khách hàng ----- */
 function renderSite() {
   const u = API.currentUser();
   const nav = [['index.html', 'Trang chủ'], ['rooms.html', 'Phòng nghỉ'], ['booking.html', 'Đặt phòng']];
@@ -98,10 +93,8 @@ function renderSite() {
     <div><a href="rooms.html">Phòng nghỉ</a><a href="account.html">Đơn của tôi</a><a href="staff.html">Dành cho nhân viên</a></div>`;
 }
 
-// Dòng phụ dưới tiêu đề trang quản lý: số liệu thật thay cho câu mô tả
 const sub = (panel, text) => { const p = $(`[data-panel="${panel}"] .manager-heading p`); if (p) p.textContent = text; };
 
-/* ----- Khung trang lễ tân / quản trị (sidebar) ----- */
 const MANAGER_NAV = [
   ['Lễ tân', 'receptionist', [['staff.html', 'bookings', 'Đơn đặt phòng'], ['staff.html', 'checkin', 'Nhận phòng'], ['staff.html', 'inhouse', 'Khách đang ở']]],
   ['Quản trị', 'admin', [['admin.html', 'stats', 'Báo cáo'], ['admin.html', 'types', 'Loại phòng'], ['admin.html', 'rooms', 'Phòng'], ['admin.html', 'staff', 'Nhân sự'], ['admin.html', 'customers', 'Khách hàng']]],

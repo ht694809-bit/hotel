@@ -10,7 +10,6 @@
   <div class="manager">
     <aside class="sidebar"></aside>
     <div class="manager-main">
-      <!-- 3.4 Báo cáo & thống kê -->
       <section data-panel="stats">
         <div class="manager-heading"><div><h1>Báo cáo</h1><p></p></div></div>
         <div class="metrics" id="metrics"></div>
@@ -23,25 +22,21 @@
         </div>
       </section>
 
-      <!-- 3.1.1 Loại phòng -->
       <section data-panel="types">
         <div class="manager-heading"><div><h1>Loại phòng</h1><p></p></div><button class="btn" data-new="types">Thêm loại phòng</button></div>
         <div class="panel"><div class="table-wrap" id="types"></div></div>
       </section>
 
-      <!-- 3.1.2 Phòng cụ thể -->
       <section data-panel="rooms">
         <div class="manager-heading"><div><h1>Phòng</h1><p></p></div><button class="btn" data-new="rooms">Thêm phòng</button></div>
         <div class="panel"><div class="table-wrap" id="rooms"></div></div>
       </section>
 
-      <!-- 3.2 Nhân sự -->
       <section data-panel="staff">
         <div class="manager-heading"><div><h1>Nhân sự</h1><p></p></div><button class="btn" data-new="staff">Thêm nhân viên</button></div>
         <div class="panel"><div class="table-wrap" id="staff"></div></div>
       </section>
 
-      <!-- 3.3 Khách hàng -->
       <section data-panel="customers">
         <div class="manager-heading"><div><h1>Khách hàng</h1><p></p></div></div>
         <div class="filters"><input type="search" id="cq" placeholder="Tên, email hoặc SĐT" aria-label="Tìm khách hàng"></div>
@@ -50,7 +45,6 @@
     </div>
   </div>
 
-  <!-- Hộp thoại thêm/sửa -->
   <dialog class="modal" id="types-dialog"><form id="types-form">
     <button type="button" class="modal-close" data-close aria-label="Đóng">×</button>
     <h2 data-title>loại phòng</h2>
@@ -94,7 +88,6 @@
   <script>
     renderManager(requireRole('admin'));
 
-    // Bảng CRUD dùng chung: bảng #<name>, hộp thoại #<name>-dialog chứa form #<name>-form
     function crud(name, { load, save, remove, head, row, summary, toForm = x => x, fromForm = x => x, beforeOpen = () => {} }) {
       const box = $(`#${name}`), dlg = $(`#${name}-dialog`), f = $(`#${name}-form`), title = $('[data-title]', dlg), base = title.textContent;
       let items = [];

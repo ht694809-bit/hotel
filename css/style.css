@@ -1630,7 +1630,6 @@ em {
   }
 }
 
-/* ===== Bổ sung cho bản theo sơ đồ chức năng ===== */
 [hidden] { display: none !important; }
 .badge.available { background: #e7f0e3; color: #5b7752; }
 .badge.occupied { background: #e2ebf6; color: #456d9b; }
@@ -1665,7 +1664,6 @@ dialog.modal::backdrop { background: #1238438c; }
 .checkout form.panel h2:not(:first-child) { margin-top: 26px; }
 .svc button { white-space: nowrap; }
 
-/* ===== Bớt chất "template": chữ thường, khu quản lý gọn và dày thông tin hơn ===== */
 .btn, .ghost, .pill { font-size: .84rem; letter-spacing: .01em; font-weight: 600; }
 .small { font-size: .78rem; }
 .room-card h3 { text-transform: none; }

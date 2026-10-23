@@ -1,5 +1,4 @@
 <?php
-/* Kết nối database + các hàm dùng chung cho mọi route. */
 
 function ok($data = [], int $code = 200): void {
     http_response_code($code);
@@ -34,9 +33,6 @@ try {
     fail(500, 'Không kết nối được database. Kiểm tra MySQL đã bật và api/config.php đúng chưa');
 }
 
-/* ----- Chuyển dữ liệu MySQL sang đúng dạng frontend đọc -----
- * PHP 8.0 trả cột số dưới dạng chuỗi ("0"), nên luôn ép (int). Chuỗi "0" trong JS bị coi là true. */
-
 function typeOut(array $t): array {
     $out = [
         'id' => (int)$t['id'], 'name' => $t['name'], 'price' => (int)$t['price'],
@@ -55,10 +51,9 @@ function roomOut(array $r): array {
 
 function userOut(array $u): array {
     return ['id' => (int)$u['id'], 'name' => $u['name'], 'email' => $u['email'],
-            'phone' => $u['phone'] ?? '', 'role' => $u['role']]; // không bao giờ trả password
+            'phone' => $u['phone'] ?? '', 'role' => $u['role']];
 }
 
-// Câu SELECT dùng chung cho đơn: kèm tên loại phòng và số phòng
 const BOOKING_SQL = 'SELECT b.*, t.name AS type_name, r.number AS room_number
                      FROM bookings b JOIN room_types t ON t.id = b.type_id
                      LEFT JOIN rooms r ON r.id = b.room_id';

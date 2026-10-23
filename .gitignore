@@ -1,7 +1,5 @@
-# Cấu hình DB riêng từng máy (có mật khẩu)
 api/config.php
 
-# File của editor / hệ điều hành
 .claude/
 .vscode/
 .idea/

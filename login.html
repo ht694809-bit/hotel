@@ -47,7 +47,6 @@
   <script src="js/api.js"></script>
   <script src="js/common.js"></script>
   <script>
-    // Chỉ cho quay về trang nội bộ (chặn next=javascript:… / trang ngoài)
     const next = /^[a-z]+\.html([?#].*)?$/.test(qs('next') || '') ? qs('next') : null;
     const home = { admin: 'admin.html', receptionist: 'staff.html', customer: 'account.html' };
     const go = u => location.href = next || home[u.role];

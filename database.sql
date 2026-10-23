@@ -1,13 +1,3 @@
--- Database cho hệ thống quản lý khách sạn SOLENA.
--- CHẠY LẠI FILE NÀY SẼ XÓA SẠCH DỮ LIỆU CŨ của database `hotel` rồi tạo lại từ đầu.
--- Ai sửa cấu trúc bảng thì sửa file này, commit, và báo người kia chạy lại.
---
--- Tài khoản mẫu (mật khẩu đã mã hóa bằng password_hash):
---   admin@solena.vn / admin123      (quản trị)
---   letan@solena.vn / 123456        (lễ tân)
---   khach@gmail.com / 123456        (khách)
---   hoa@gmail.com   / 123456        (khách)
-
 DROP DATABASE IF EXISTS hotel;
 CREATE DATABASE hotel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE hotel;
@@ -27,7 +17,7 @@ CREATE TABLE room_types (
   price INT NOT NULL,
   capacity INT NOT NULL,
   image VARCHAR(255),
-  amenities TEXT,                       -- JSON: ["Wi-Fi","Điều hòa"]
+  amenities TEXT,
   description TEXT
 );
 
@@ -47,12 +37,12 @@ CREATE TABLE services (
 
 CREATE TABLE bookings (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  customer_id INT NULL,                 -- NULL = khách vãng lai không đăng nhập
+  customer_id INT NULL,
   guest_name VARCHAR(100) NOT NULL,
   guest_phone VARCHAR(20) NOT NULL,
   guest_email VARCHAR(150),
   type_id INT NOT NULL,
-  room_id INT NULL,                     -- gán khi check-in
+  room_id INT NULL,
   check_in DATE NOT NULL,
   check_out DATE NOT NULL,
   guests INT NOT NULL,
@@ -75,8 +65,6 @@ CREATE TABLE booking_services (
   qty INT NOT NULL DEFAULT 1,
   FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
 );
-
--- ===== Dữ liệu mẫu (giống dữ liệu giả trong js/api.js) =====
 
 INSERT INTO users (id, name, email, phone, password, role) VALUES
 (1, 'Quản trị viên', 'admin@solena.vn', '0900000001', '$2y$10$6y8RE7wUeaR0YAcYr6K1Bu//537N5cDOfDjO5EznM5di8FbJqg4TG', 'admin'),
@@ -104,7 +92,6 @@ INSERT INTO services (name, price) VALUES
 ('Nước suối', 15000), ('Bia', 30000), ('Nước ngọt', 25000),
 ('Giặt ủi', 50000), ('Ăn sáng', 120000), ('Minibar', 80000);
 
--- Ngày tính theo ngày chạy file, để lúc nào import cũng có đơn hôm nay / sắp tới / đã qua
 INSERT INTO bookings (id, customer_id, guest_name, guest_phone, guest_email, type_id, room_id, check_in, check_out, guests, payment, status, room_total, created_at, paid_at) VALUES
 (1, 3, 'Trần Văn Khách', '0912345678', 'khach@gmail.com', 1, 1, CURDATE() - INTERVAL 400 DAY, CURDATE() - INTERVAL 398 DAY, 2, 'cash', 'checked_out', 1200000, CURDATE() - INTERVAL 403 DAY, CURDATE() - INTERVAL 398 DAY),
 (2, 4, 'Lê Thị Hoa', '0987654321', 'hoa@gmail.com', 3, 8, CURDATE() - INTERVAL 45 DAY, CURDATE() - INTERVAL 43 DAY, 2, 'transfer', 'checked_out', 3200000, CURDATE() - INTERVAL 48 DAY, CURDATE() - INTERVAL 43 DAY),
